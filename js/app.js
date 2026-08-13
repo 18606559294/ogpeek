@@ -1,12 +1,41 @@
 /*
  * ogpeek — app controller
  * Wires input (paste HTML / fetch URL) -> parse -> render all platform previews.
+ * Plus a two-way "generate tags" panel: edit resolved fields -> get a paste-ready <meta> block.
  */
-import { parseHtml, resolveUrl, domainOf } from './parse.js';
+import { parseHtml, resolveUrl } from './parse.js';
 import {
   renderTwitter, renderFacebook, renderLinkedIn, renderSlack,
   renderDiscord, renderIMessage, esc,
 } from './preview.js';
+
+// ---- exported for tests (pure) ----
+export function buildMetaBlock(v) {
+  const tags = buildMetaTagList(v);
+  if (!tags.length) return '';
+  const indent = '  ';
+  return tags.map(([k, val]) => `${indent}<meta ${attrName(k)}="${escAttr(k)}" content="${escAttr(val)}" />`).join('\n');
+}
+export function attrName(k) { return k.startsWith('twitter:') ? 'name' : 'property'; }
+function escAttr(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ---- generator field config ----
+const GEN_FIELDS = [
+  { key: 'title', label: 'og:title', placeholder: 'Your page title', tw: true },
+  { key: 'description', label: 'og:description', placeholder: 'A short summary', tw: true },
+  { key: 'url', label: 'og:url', placeholder: 'https://example.com/page', tw: false },
+  { key: 'siteName', label: 'og:site_name', placeholder: 'My Site', tw: false },
+  { key: 'image', label: 'og:image', placeholder: 'https://example.com/og.png', tw: 'image' },
+  { key: 'imageWidth', label: 'og:image:width', placeholder: '1200', tw: false, num: true },
+  { key: 'imageHeight', label: 'og:image:height', placeholder: '630', tw: false, num: true },
+  { key: 'imageAlt', label: 'og:image:alt', placeholder: 'Describe the image', tw: 'imageAlt' },
+  { key: 'type', label: 'og:type', placeholder: 'website', tw: false },
+  { key: 'twitterCard', label: 'twitter:card', placeholder: 'summary_large_image', tw: false, select: ['', 'summary', 'summary_large_image', 'player', 'app'] },
+  { key: 'twitterSite', label: 'twitter:site', placeholder: '@handle', tw: false },
+  { key: 'twitterCreator', label: 'twitter:creator', placeholder: '@handle', tw: false },
+];
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -44,6 +73,7 @@ export function init() {
   const clearBtn = $('#clear-btn');
   const urlInput = $('#url-input');
   const proxyToggle = $('#proxy-toggle');
+  const genCopy = $('#gen-copy');
 
   // initial render with the sample so the page is never empty
   input.value = SAMPLE;
@@ -67,6 +97,29 @@ export function init() {
   });
 
   fetchBtn.addEventListener('click', () => doFetch(urlInput, input, proxyToggle.checked));
+
+  // generator: keep the <meta> block live as fields are edited (two-way)
+  $('#gen-form').addEventListener('input', onGenInput);
+  $('#gen-form').addEventListener('change', onGenInput);
+  genCopy.addEventListener('click', copyGenCode);
+}
+
+// current editable generator values (source of truth for previews + output)
+let genValues = {};
+let genBase = null;
+
+function onGenInput() {
+  // read all fields back from the DOM
+  GEN_FIELDS.forEach((f) => {
+    const el = document.querySelector(`#gen-form [data-k="${f.key}"]`);
+    if (!el) return;
+    let val = el.value.trim();
+    if (f.num) val = val.replace(/[^0-9]/g, '');
+    genValues[f.key] = val || null;
+  });
+  renderGenCode();
+  // live-update previews from the edited values (true two-way tool)
+  rerenderPreviewsFromGen(genBase);
 }
 
 async function doFetch(urlInput, input, useProxy) {
@@ -111,17 +164,36 @@ async function doFetch(urlInput, input, useProxy) {
 function run(html, base) {
   const data = parseHtml(html);
   const effBase = base || (data.url ? resolveUrl(data.url) : lastBase);
+  genBase = effBase;
+
+  // seed editable generator values from the freshly parsed data
+  genValues = {
+    title: data.title,
+    description: data.description,
+    url: data.url ? resolveUrl(data.url, effBase) : null,
+    siteName: data.siteName,
+    image: data.image ? resolveUrl(data.image, effBase) : null,
+    imageWidth: data.imageWidth,
+    imageHeight: data.imageHeight,
+    imageAlt: data.imageAlt,
+    type: data.type,
+    locale: data.locale,
+    twitterCard: data.twitterCard,
+    twitterSite: data.twitterSite,
+    twitterCreator: data.twitterCreator,
+    twitterImage: data.image ? resolveUrl(data.image, effBase) : null,
+    twitterImageAlt: data.imageAlt,
+  };
 
   // platform previews
-  $('#prev-twitter').innerHTML = renderTwitter(data, effBase);
-  $('#prev-facebook').innerHTML = renderFacebook(data, effBase);
-  $('#prev-linkedin').innerHTML = renderLinkedIn(data, effBase);
-  $('#prev-slack').innerHTML = renderSlack(data, effBase);
-  $('#prev-discord').innerHTML = renderDiscord(data, effBase);
-  $('#prev-imessage').innerHTML = renderIMessage(data, effBase);
+  renderAllPreviews(genValues, effBase);
 
   // resolved fields table
   renderFields(data, effBase);
+
+  // generator form + output
+  renderGenForm();
+  renderGenCode();
 
   // raw meta inspector
   renderRaw(data.raw);
@@ -132,6 +204,112 @@ function run(html, base) {
   // status line
   const count = data.raw.length;
   $('#meta-count').textContent = count + ' meta tag' + (count === 1 ? '' : 's');
+}
+
+function renderAllPreviews(v, base) {
+  const d = {
+    title: v.title, description: v.description, url: v.url, siteName: v.siteName,
+    image: v.image, imageAlt: v.imageAlt, imageWidth: v.imageWidth, imageHeight: v.imageHeight,
+    twitterCard: v.twitterCard, twitterSite: v.twitterSite, twitterCreator: v.twitterCreator,
+    twitterTitle: v.title, twitterDescription: v.description, twitterImage: v.twitterImage,
+  };
+  $('#prev-twitter').innerHTML = renderTwitter(d, base);
+  $('#prev-facebook').innerHTML = renderFacebook(d, base);
+  $('#prev-linkedin').innerHTML = renderLinkedIn(d, base);
+  $('#prev-slack').innerHTML = renderSlack(d, base);
+  $('#prev-discord').innerHTML = renderDiscord(d, base);
+  $('#prev-imessage').innerHTML = renderIMessage(d, base);
+}
+
+function rerenderPreviewsFromGen(base) {
+  renderAllPreviews(genValues, base);
+}
+
+function renderGenForm() {
+  const html = GEN_FIELDS.map((f) => {
+    const val = genValues[f.key] ?? '';
+    const control = f.select
+      ? `<select data-k="${f.key}">${f.select.map((o) =>
+          `<option value="${esc(o)}"${o === val ? ' selected' : ''}>${esc(o || '— none —')}</option>`).join('')}</select>`
+      : `<input data-k="${f.key}" type="text" value="${escAttr(val)}" placeholder="${esc(f.placeholder || '')}" spellcheck="false" autocomplete="off" />`;
+    const hint = f.tw === true ? '<span class="hint">also feeds twitter:title / description</span>'
+      : f.tw === 'image' ? '<span class="hint">also feeds twitter:image</span>'
+      : f.tw === 'imageAlt' ? '<span class="hint">also feeds twitter:image:alt</span>' : '';
+    return `<div class="gen-field"><label>${esc(f.label)}${hint}</label>${control}</div>`;
+  }).join('');
+  $('#gen-form').innerHTML = html;
+}
+
+function renderGenCode() {
+  const v = { ...genValues };
+  v.twitterImage = v.image;
+  v.twitterImageAlt = v.imageAlt;
+  const tags = buildMetaTagList(v);
+  const el = $('#gen-code');
+  if (!tags.length) {
+    el.innerHTML = '<span class="t-empty">Fill a field above to generate tags.</span>';
+    return;
+  }
+  el.innerHTML = tags.map(([k, val]) => {
+    const attr = attrName(k);
+    return '<span class="t-tag">&lt;meta</span> <span class="t-attr">' + esc(attr) + '</span>="' + esc(k) + '" <span class="t-attr">content</span>="<span class="t-val">' + esc(val) + '</span>" /&gt;';
+  }).join('\n');
+}
+
+// ordered list of [key, value] pairs (pure, exported for tests)
+export function buildMetaTagList(v) {
+  const tags = [];
+  if (v.title) tags.push(['og:title', v.title]);
+  if (v.description) tags.push(['og:description', v.description]);
+  if (v.url) tags.push(['og:url', v.url]);
+  if (v.siteName) tags.push(['og:site_name', v.siteName]);
+  if (v.image) tags.push(['og:image', v.image]);
+  if (v.imageWidth) tags.push(['og:image:width', String(v.imageWidth)]);
+  if (v.imageHeight) tags.push(['og:image:height', String(v.imageHeight)]);
+  if (v.imageAlt) tags.push(['og:image:alt', v.imageAlt]);
+  if (v.type) tags.push(['og:type', v.type]);
+  if (v.locale) tags.push(['og:locale', v.locale]);
+  if (v.twitterCard) tags.push(['twitter:card', v.twitterCard]);
+  if (v.twitterSite) tags.push(['twitter:site', v.twitterSite]);
+  if (v.twitterCreator) tags.push(['twitter:creator', v.twitterCreator]);
+  if (v.twitterImage) tags.push(['twitter:image', v.twitterImage]);
+  if (v.twitterImageAlt) tags.push(['twitter:image:alt', v.twitterImageAlt]);
+  return tags;
+}
+
+function copyGenCode() {
+  const v = { ...genValues, twitterImage: genValues.image, twitterImageAlt: genValues.imageAlt };
+  const code = buildMetaBlock(v);
+  const flashEl = $('#gen-flash');
+  const done = (msg, kind) => {
+    flashEl.textContent = msg;
+    flashEl.className = 'gen-flash show' + (kind ? ' ' + kind : '');
+    setTimeout(() => { flashEl.className = 'gen-flash'; }, 2500);
+  };
+  if (!code) { done('Nothing to copy yet.', 'err'); return; }
+  const full = '<!-- open-graph + twitter card tags -->\n' + code + '\n';
+  const ok = () => done('Copied ' + (full.split('\n').length - 2) + ' tags to clipboard ✓');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(full).then(ok, () => fallbackCopy(full, ok, done));
+  } else {
+    fallbackCopy(full, ok, done);
+  }
+}
+
+function fallbackCopy(text, ok, err) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const worked = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (worked) ok(); else err('Copy failed — select the code manually.', 'err');
+  } catch {
+    err('Copy failed — select the code manually.', 'err');
+  }
 }
 
 function renderFields(d, base) {

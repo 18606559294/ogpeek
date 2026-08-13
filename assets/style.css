@@ -336,6 +336,39 @@ textarea#html-input:focus { color: var(--ink); }
 .im .title { font-size: 13px; font-weight: 600; line-height: 1.25; color: #000; }
 .im .host { font-size: 11px; color: #8e8e93; margin-top: 2px; }
 
+/* ---------------- generator ---------------- */
+.gen-form { padding: 4px 0 2px; }
+.gen-field { display: grid; grid-template-columns: 118px 1fr; gap: 12px; align-items: start; padding: 8px 18px; border-bottom: 1px solid var(--line-soft); }
+.gen-field:last-child { border-bottom: 0; }
+.gen-field label { color: var(--ink-mute); font-size: 10.5px; letter-spacing: .5px; text-transform: uppercase; padding-top: 8px; }
+.gen-field label .hint { display: block; color: var(--ink-mute); opacity: .6; font-size: 9px; letter-spacing: .3px; text-transform: none; margin-top: 2px; }
+.gen-field input, .gen-field select {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--ink); font-family: var(--mono); font-size: 12.5px;
+  padding: 7px 10px; outline: 0; width: 100%; transition: border-color .15s;
+}
+.gen-field input:focus, .gen-field select:focus { border-color: var(--amber); }
+.gen-field input::placeholder { color: var(--ink-mute); opacity: .55; }
+.gen-field select { appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23a7a59f' stroke-width='1.5' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+.gen-out { border-top: 1px solid var(--line-soft); background: var(--bg-2); }
+.gen-out-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px 0; }
+.gen-out-title { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-mute); }
+.gen-code {
+  margin: 10px 18px 14px; padding: 16px; max-height: 240px; overflow: auto;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink-dim);
+  white-space: pre-wrap; word-break: break-word; tab-size: 2;
+}
+.gen-code .t-tag { color: var(--ink-mute); }
+.gen-code .t-attr { color: var(--amber); }
+.gen-code .t-val { color: var(--ink); }
+.gen-code .t-empty { color: var(--ink-mute); font-style: italic; }
+.gen-flash { padding: 0 18px 12px; font-size: 11px; color: var(--ok); min-height: 0; overflow: hidden; transition: min-height .15s; }
+.gen-flash.show { min-height: 16px; }
+.gen-flash.err { color: var(--err); }
+
 /* ---------------- inspector ---------------- */
 .inspector { position: relative; z-index: 2; max-width: 1180px; margin: 26px auto 0; padding: 0 36px; }
 .raw { padding: 6px 0; max-height: 360px; overflow: auto; }

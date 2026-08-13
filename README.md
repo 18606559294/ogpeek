@@ -13,6 +13,7 @@ ogpeek is a **social card previewer + meta tag inspector**. Given a page's HTML 
 1. **Renders 6 platform previews** — X/Twitter (summary & large-image), Facebook, LinkedIn, Slack, Discord, iMessage — each styled to match how that platform actually displays the card.
 2. **Inspects every `<meta>` tag** — Open Graph, Twitter Card, canonical, favicon, theme color — in a raw table.
 3. **Diagnoses problems** — missing title/description/image, relative image paths, missing dimensions, card-type/image mismatches.
+4. **Generates `<meta>` tags (two-way)** — edit any resolved field in the *Generate tags* panel and ogpeek emits a paste-ready Open Graph + Twitter Card block. Previews update live as you edit, so it's a true inspector *and* generator in one pass.
 
 ## Why
 
