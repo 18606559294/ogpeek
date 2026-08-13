@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ogpeek — preview how your link looks on every platform</title>
+  <meta name="description" content="Paste a URL or your HTML and instantly see how X, Facebook, LinkedIn, Slack, Discord, and iMessage will render your page. Catch broken og:image and twitter:card tags before your users do. Free, no signup." />
+  <link rel="canonical" href="https://18606559294.github.io/ogpeek/" />
+
+  <!-- OG / Twitter for the tool itself -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="ogpeek" />
+  <meta property="og:title" content="ogpeek — preview how your link looks on every platform" />
+  <meta property="og:description" content="See exactly how X, Facebook, LinkedIn, Slack, Discord, and iMessage render your page. Free, no signup." />
+  <meta property="og:url" content="https://18606559294.github.io/ogpeek/" />
+  <meta property="og:image" content="https://ogpeek.pages.dev/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ogpeek — preview how your link looks on every platform" />
+  <meta name="twitter:description" content="See exactly how X, Facebook, LinkedIn, Slack, Discord, and iMessage render your page. Free, no signup." />
+  <meta name="twitter:image" content="https://ogpeek.pages.dev/og.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d0d0f'/%3E%3Cpath d='M9 9h14v14H9z' fill='none' stroke='%23ffb454' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ffb454'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="26" height="26"><rect x="3" y="3" width="26" height="26" rx="6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/><circle cx="16" cy="16" r="3" fill="currentColor"/></svg>
+      </span>
+      <span class="word">og<span class="amber">peek</span></span>
+    </a>
+    <nav class="topnav">
+      <a href="#tool">Tool</a>
+      <a href="#why">Why</a>
+      <a href="#api">API</a>
+      <a class="cta-mini" href="https://github.com/18606559294/snapog" target="_blank" rel="noopener">Get the API →</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="kicker">SOCIAL CARD INSPECTOR · v1</div>
+    <h1>
+      See your link the way<br/>
+      <em>every platform</em> sees it.
+    </h1>
+    <p class="lede">
+      Paste a URL or your HTML. ogpeek renders the real
+      <span class="hl">X / Twitter</span>,
+      <span class="hl">Facebook</span>,
+      <span class="hl">LinkedIn</span>,
+      <span class="hl">Slack</span>,
+      <span class="hl">Discord</span> and
+      <span class="hl">iMessage</span> card — and flags every missing or broken
+      <code>og:image</code>, <code>twitter:card</code> and dimension tag
+      <span class="hl">before</span> your users notice.
+    </p>
+
+    <div class="hero-meta">
+      <span class="chip">No signup</span>
+      <span class="chip">No backend</span>
+      <span class="chip">Runs in your browser</span>
+      <span class="chip">Free, forever</span>
+    </div>
+  </section>
+
+  <main id="tool" class="workspace">
+    <!-- INPUT COLUMN -->
+    <div class="col-input">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Input</h2>
+          <div class="panel-actions">
+            <button id="sample-btn" type="button" class="ghost">Sample</button>
+            <button id="clear-btn" type="button" class="ghost">Clear</button>
+          </div>
+        </div>
+
+        <div class="urlbar">
+          <span class="url-prefix" aria-hidden="true">URL</span>
+          <input id="url-input" type="text" placeholder="example.com or paste HTML below" spellcheck="false" autocomplete="off" />
+          <button id="fetch-btn" type="button" class="fetch">Fetch</button>
+        </div>
+        <div class="url-hint">
+          <label class="switch">
+            <input id="proxy-toggle" type="checkbox" />
+            <span class="track"></span>
+            <span class="lbl">Retry via public proxy if blocked by CORS</span>
+          </label>
+        </div>
+
+        <textarea id="html-input" spellcheck="false" placeholder="Paste your page's HTML here, or type a URL above and hit Fetch."></textarea>
+
+        <div id="flash" class="flash" role="status" aria-live="polite"></div>
+      </div>
+
+      <div class="panel warn-panel">
+        <div class="panel-head"><h2>Diagnostics</h2><span id="meta-count" class="count">0 meta tags</span></div>
+        <div id="warnings"></div>
+      </div>
+    </div>
+
+    <!-- PREVIEW COLUMN -->
+    <div class="col-preview">
+      <div class="panel">
+        <div class="panel-head"><h2>Resolved metadata</h2></div>
+        <div id="fields" class="fields"></div>
+      </div>
+
+      <div class="previews">
+        <div class="pv">
+          <div class="pv-label"><span class="dot x"></span>X / Twitter</div>
+          <div id="prev-twitter" class="stage"></div>
+        </div>
+        <div class="pv">
+          <div class="pv-label"><span class="dot fb"></span>Facebook</div>
+          <div id="prev-facebook" class="stage"></div>
+        </div>
+        <div class="pv">
+          <div class="pv-label"><span class="dot li"></span>LinkedIn</div>
+          <div id="prev-linkedin" class="stage"></div>
+        </div>
+        <div class="pv">
+          <div class="pv-label"><span class="dot sl"></span>Slack</div>
+          <div id="prev-slack" class="stage"></div>
+        </div>
+        <div class="pv">
+          <div class="pv-label"><span class="dot dc"></span>Discord</div>
+          <div id="prev-discord" class="stage"></div>
+        </div>
+        <div class="pv">
+          <div class="pv-label"><span class="dot im"></span>iMessage</div>
+          <div id="prev-imessage" class="stage"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <section class="inspector">
+    <div class="panel">
+      <div class="panel-head"><h2>Raw meta tags</h2><span class="muted">inspect every &lt;meta&gt; tag in your HTML</span></div>
+      <div id="raw" class="raw"></div>
+    </div>
+  </section>
+
+  <section id="why" class="why">
+    <h2>Why this exists</h2>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="wnum">01</div>
+        <h3>Broken cards cost clicks</h3>
+        <p>A missing <code>og:image</code> or a relative image path makes your link render as a sad text-only block. Studies put the click-through lift from a good preview at <strong>2–5×</strong>.</p>
+      </div>
+      <div class="why-card">
+        <div class="wnum">02</div>
+        <h3>Every platform is different</h3>
+        <p>X trims at 1.4× ratio. Facebook wants 1.91:1. Discord renders in a dark embed. Slack shows a 75px thumb. ogpeek shows all of them, side by side, in one pass.</p>
+      </div>
+      <div class="why-card">
+        <div class="wnum">03</div>
+        <h3>No accounts, no uploads</h3>
+        <p>Your HTML never leaves your browser. There's no backend to log into and nothing to leak. Paste, read, fix, ship.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="api" class="api">
+    <div class="api-inner">
+      <div class="api-kicker">NEED THIS AT SCALE?</div>
+      <h2>Render OG images with one API call.</h2>
+      <p>
+        ogpeek tells you <em>what's wrong</em>. Its companion, <strong>SnapOG</strong>,
+        generates the <code>og:image</code> PNG itself — 3 templates, global edge cache,
+        a free tier. Register, get a key, hit one URL.
+      </p>
+      <div class="api-code">
+        <span class="c-com"># free tier, no card</span><br/>
+        <span class="c-key">GET</span> https://snapog.<span class="amber">workers</span>.dev/img?title=Hello&amp;template=sunset<br/>
+        <span class="c-com"># → 1200×630 PNG, edge-cached worldwide</span>
+      </div>
+      <a class="api-cta" href="https://github.com/18606559294/snapog" target="_blank" rel="noopener">Explore SnapOG API →</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="foot-l">
+      ogpeek · a free tool by Auto-Company ·
+      <a href="https://github.com/18606559294/ogpeek" target="_blank" rel="noopener">source on GitHub</a>
+    </div>
+    <div class="foot-r">
+      Built without a backend. No tracking. Copy whatever helps.
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
